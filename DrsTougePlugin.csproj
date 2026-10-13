@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- TargetFramework is a default only: the GitHub build overrides it with the one your AssettoServer version uses. -->
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <EnableDynamicLoading>true</EnableDynamicLoading>
+        <AssemblyName>DrsTougePlugin</AssemblyName>
+        <RootNamespace>DrsTougePlugin</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\AssettoServer\AssettoServer.csproj">
+            <Private>false</Private>
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </ProjectReference>
+    </ItemGroup>
+
+</Project>
