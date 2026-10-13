@@ -33,9 +33,11 @@ jobs:
       - name: Get AssettoServer source
         run: |
           V="${{ steps.ver.outputs.v }}"
-          git clone --depth 1 --branch "$V" https://github.com/compujuckel/AssettoServer.git assettoserver \
-            || git clone --depth 1 --branch "v${V#v}" https://github.com/compujuckel/AssettoServer.git assettoserver
-          cp -r plugin-src assettoserver/DrsTougePlugin
+          git clone --branch "$V" https://github.com/compujuckel/AssettoServer.git assettoserver \
+            || git clone --branch "v${V#v}" https://github.com/compujuckel/AssettoServer.git assettoserver
+          # full history is needed by the version-stamping tool; copy the plugin WITHOUT its own .git
+          mkdir assettoserver/DrsTougePlugin
+          tar -C plugin-src --exclude=.git -cf - . | tar -C assettoserver/DrsTougePlugin -xf -
 
       - name: Find the .NET version AssettoServer uses
         id: tfm
