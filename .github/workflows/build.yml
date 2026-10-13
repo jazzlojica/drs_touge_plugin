@@ -1,0 +1,67 @@
+name: Build DRS touge plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      assettoserver_version:
+        description: "AssettoServer version, e.g. v0.0.54 (leave empty to use ASSETTOSERVER_VERSION.txt)"
+        required: false
+        default: ""
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get plugin source
+        uses: actions/checkout@v4
+        with:
+          path: plugin-src
+
+      - name: Work out the AssettoServer version
+        id: ver
+        run: |
+          V="${{ github.event.inputs.assettoserver_version }}"
+          if [ -z "$V" ]; then V=$(tr -d '[:space:]' < plugin-src/ASSETTOSERVER_VERSION.txt); fi
+          if [ -z "$V" ] || [ "$V" = "latest" ]; then
+            V=$(curl -s https://api.github.com/repos/compujuckel/AssettoServer/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
+          fi
+          echo "Using AssettoServer $V"
+          echo "v=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Get AssettoServer source
+        run: |
+          V="${{ steps.ver.outputs.v }}"
+          git clone --depth 1 --branch "$V" https://github.com/compujuckel/AssettoServer.git assettoserver \
+            || git clone --depth 1 --branch "v${V#v}" https://github.com/compujuckel/AssettoServer.git assettoserver
+          cp -r plugin-src assettoserver/DrsTougePlugin
+
+      - name: Find the .NET version AssettoServer uses
+        id: tfm
+        run: |
+          T=$(grep -rhoP '(?<=<TargetFramework>)[^<]+' assettoserver/AssettoServer/AssettoServer.csproj assettoserver/Directory.Build.props 2>/dev/null | head -1)
+          if [ -z "$T" ]; then T=net8.0; fi
+          echo "Target framework: $T"
+          echo "t=$T" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Build
+        run: |
+          dotnet publish assettoserver/DrsTougePlugin/DrsTougePlugin.csproj -c Release \
+            -p:TargetFramework=${{ steps.tfm.outputs.t }} -o out/DrsTougePlugin
+          # keep only our own files; AssettoServer already provides everything else
+          find out/DrsTougePlugin -type f ! -name 'DrsTougePlugin.*' -delete
+          rm -f out/DrsTougePlugin/*.pdb
+          ls -la out/DrsTougePlugin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DrsTougePlugin
+          path: out/
